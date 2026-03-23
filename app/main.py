@@ -10,7 +10,7 @@ def get_shipment():
         "status" : "In Transit"
     }
 
-@app.get("/scalar")
+@app.get("/scalar", include_in_schema=False)
 def get_scalar_doc():
     return get_scalar_api_reference(
         openapi_url=app.openapi_url,
