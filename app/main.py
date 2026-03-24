@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from scalar_fastapi import get_scalar_api_reference
 
 # Create a FastAPI application instance. 
@@ -88,4 +88,100 @@ def get_shipment_by_id_v1(id: int) -> dict[str, Any]:
         return {
             "error" : "Shipment not found"
         }
+    return shipments[id]
+
+# This endpoint retrieves shipment information based on the provided ID. 
+# If no ID is provided, it returns the latest shipment information.
+@app.get("/v2/shipment")
+def get_shipment_by_id_v2(id: int | None = None) -> dict[str, Any]:
+    if not id:
+        id = max(shipments.keys())
+        return shipments[id]
+    if id not in shipments:
+        # If the shipment ID is not found in the shipments dictionary,
+        # an HTTPException is raised with a 404 status code and a detail message.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Shipment not found")
+    
+    return shipments[id]
+
+@app.post("/v1/shipment")
+def submit_shipment(content: str, weight: float):
+    if weight > 25:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE, 
+            detail="Shipment weight exceeds the maximum limit of 25 kg"
+        )
+
+    new_id = max(shipments.keys()) + 1
+    shipments[new_id] = {
+        "weight" : weight,
+        "content" : content,
+        "status" : "Placed"
+    }
+    return shipments[new_id]
+
+@app.post("/v2/shipment")
+def submit_shipment_v2(data: dict) -> dict[str, Any]:
+    content = data["content"]
+    weight = data["weight"]
+    if weight > 25:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE, 
+            detail="Shipment weight exceeds the maximum limit of 25 kg"
+        )
+
+    new_id = max(shipments.keys()) + 1
+    shipments[new_id] = {
+        "weight" : weight,
+        "content" : content,
+        "status" : "Placed"
+    }
+    return shipments[new_id]
+
+@app.get("/v2/shipment/{field}")
+def get_shipment_field(field: str, id: int) -> dict[str, Any]:
+    return {
+        field: shipments[id][field]
+    }
+
+@app.put("/v1/shipment/{id}")
+def shipment_update(
+    id: int, content: str, weight: float, status: str
+    ) -> dict[str, Any]:
+    shipments[id] = {
+        "weight" : weight,
+        "content" : content,
+        "status" : status
+    }
+    return shipments[id]
+
+# This endpoint updates the shipment information based on the provided ID. 
+@app.patch("/v1/shipment")
+def patch_shipment(
+    id: int, 
+    content: str | None = None, 
+    weight: float | None = None, 
+    status: str | None = None,
+):
+    shipment = shipments[id]
+    if content:
+        shipment["content"] = content
+    if weight:
+        shipment["weight"] = weight
+    if status:
+        shipment["status"] = status
+    shipments[id] = shipment
+    return shipments[id]
+
+# This endpoint updates the shipment information based on the provided ID.
+@app.patch("/v2/shipment")
+def patch_shipment_v2(
+    id: int, 
+    body: dict[str, Any],
+):
+    shipment = shipments[id]
+    shipment.update(body)
+    shipments[id] = shipment
     return shipments[id]
