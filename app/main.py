@@ -185,3 +185,11 @@ def patch_shipment_v2(
     shipment.update(body)
     shipments[id] = shipment
     return shipments[id]
+
+# This endpoint deletes a shipment based on the provided ID.
+@app.delete("/v1/shipment")
+def delete_shipment(id: int) -> dict[str, str]:
+    shipments.pop(id)
+    return {
+        "message" : f"Shipment {id} deleted successfully"
+    }
