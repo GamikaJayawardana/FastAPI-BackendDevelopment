@@ -1,7 +1,9 @@
 from typing import Any
-
 from fastapi import FastAPI, HTTPException, status
 from scalar_fastapi import get_scalar_api_reference
+from app.schemas import Shipment, ShipmentRead, ShipmentStatus, ShipmentUpdate
+
+
 
 # Create a FastAPI application instance. 
 # This instance will be used to define the API endpoints and handle incoming requests.
@@ -42,38 +44,36 @@ def get_scalar_doc():
     )
 
 
-
-
 shipments ={
     12701: {
         "weight" : 10.5,
         "content" : "Woden Table",
-        "status" : "Placed"
+        "status" : ShipmentStatus.placed
     },
     12702: {
         "weight" : 5.0,
         "content" : "Metal Chair",
-        "status" : "In Transit"
+        "status" : ShipmentStatus.in_transit
     },
     12703: {
         "weight" : 2.0,
         "content" : "Plastic Lamp",
-        "status" : "Delivered"
+        "status" : ShipmentStatus.delivered
     },
     12704: {
         "weight" : 15.0,
         "content" : "Glass Vase",
-        "status" : "Placed"
+        "status" : ShipmentStatus.placed
     },
     12705: {
         "weight" : 8.0,
         "content" : "Leather Sofa",
-        "status" : "In Transit"
+        "status" : ShipmentStatus.in_transit
     },
     12706: {
         "weight" : 3.5,
         "content" : "Ceramic Plate",
-        "status" : "Delivered"
+        "status" : ShipmentStatus.delivered
     },
 }
 
@@ -193,3 +193,40 @@ def delete_shipment(id: int) -> dict[str, str]:
     return {
         "message" : f"Shipment {id} deleted successfully"
     }
+
+
+
+@app.post("/v3/shipment")
+def submit_shipment_v3(body: Shipment) -> dict[str, Any]:
+    if body.weight > 25:
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE, 
+            detail="Shipment weight exceeds the maximum limit of 25 kg"
+        )
+
+    new_id = max(shipments.keys()) + 1
+    shipments[new_id] = {
+        "weight" : body.weight,
+        "content" : body.content,
+        "status" : body.status,
+        "destination" : body.destination
+    }
+    return shipments[new_id]
+
+
+# This endpoint retrieves shipment information based on the provided ID.
+@app.get("/v4/shipment", response_model=ShipmentRead)
+def get_shipment_v4(id: int):
+    if id not in shipments:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shipment not found"
+        )
+    return shipments[id]
+
+@app.patch("/v4/shipment")
+def patch_shipment_v4(id: int, body: ShipmentUpdate):
+    shipment = shipments[id]
+    shipment["status"] = body.status
+    shipments[id] = shipment
+    return shipments[id]
