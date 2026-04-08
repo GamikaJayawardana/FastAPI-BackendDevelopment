@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 from rich import print, panel
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from scalar_fastapi import get_scalar_api_reference
-from sqlmodel import Session
+from app.api.router import router
 from app.databases import ShipmentsDatabase
-from app.database.session import create_db_tables, SessionDep, get_session
-from app.schemas import Shipment, ShipmentCreate, ShipmentRead, ShipmentUpdate
+from app.database.session import create_db_tables
+from app.schemas import ShipmentCreate, ShipmentRead, ShipmentUpdate
+
+
 
 @asynccontextmanager
 async def lifefan_handler(app: FastAPI):
@@ -19,13 +21,8 @@ app = FastAPI(lifespan=lifefan_handler)
 
 db = ShipmentsDatabase()
 
-@app.get("/shipment", response_model = ShipmentRead)
-def get_shipment(id: int, session = SessionDep):
-    shipment = session.get(Shipment, id)
-    # shipment = db.get(id)
-    if shipment is None:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-    return shipment
+app.include_router(router)
+
 
 @app.post("/shipment", response_model = ShipmentCreate)
 def create_shipment(shipment: ShipmentCreate):
